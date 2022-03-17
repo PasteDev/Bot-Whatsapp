@@ -15,11 +15,11 @@ sudo apt install npm
 ```
 
 ## Install
->Run ``npm install`` in the bot directory and make sure it passes.
+>Run `npm install` in the bot directory and make sure it passes.
 
->Now configure your ``.env`` with the phone number of the bot.
+>Now configure your `.env` with the phone number of the bot.
 
->Run ``npm start`` or ``node Bot-Whatsapp.js`` to start the bot.
+>Run `npm start` or `node Bot-Whatsapp.js` to start the bot.
 
 >Scan the QR code that appears on the console.
 

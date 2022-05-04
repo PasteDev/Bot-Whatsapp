@@ -1,7 +1,9 @@
 require('dotenv').config()
 const qrcode = require("qrcode-terminal");
-const { Client, MessageMedia } = require("whatsapp-web.js");
+const fs = require('fs');
+const { Client, MessageMedia, LocalAuth } = require("whatsapp-web.js");
 const libre = require('libreoffice-convert');
+const { Console } = require("console");
 libre.convertAsync = require('util').promisify(libre.convert);
 
 
@@ -9,21 +11,20 @@ const country_code = process.env.COUNTRY_CODE;
 const number = process.env.NUMBER;
 const msg = process.env.MSG;
 
+
 const client = new Client({ puppeteer: { headless: true } });
 
 
 client.on("qr", qr => {
     qrcode.generate(qr, { small: true });
 });
-
-client.on("authenticated", () => {
-    console.log('Bot -> Autenticado')
-});
+client.on('authenticated', () => {
+    console.log('Bot -> Autentificado');
+})
 
 client.on("auth_failure", msg => {
     console.log('Bot -> Autentificación Fallida', msg);
 })
-
 
 client.on("ready", () => {
     console.log("Bot -> El cliente está activo");
@@ -35,6 +36,14 @@ client.on("ready", () => {
             }
         })
 });
+
+
+const myLogger = new Console({
+    stdout: fs.createWriteStream("./Logs/log.txt"),
+    stderr: fs.createWriteStream("./Logs/errorLog.txt"),
+});
+
+
 client.on("message_create", async message => {
     if (!message.fromMe) {
         if (message.hasMedia) {
@@ -56,7 +65,9 @@ client.on("message_create", async message => {
                     const nationalPhoneCode = require('national-phone-code')
                     const country = nationalPhoneCode.getCodeInfo(CodeCountry).english_name
                     const timestamp = require('moment-timezone');
+                    myLogger.log("[" + timestamp.tz("America/Argentina/Buenos_Aires").format("DD/MM - HH:mm") + "] [" + country + "] (" + contact.pushname + " | " + formattedNumber + ") mandó un Archivo para convertirlo en PDF");
                     console.log("[" + timestamp.tz("America/Argentina/Buenos_Aires").format("DD/MM - HH:mm") + "] [" + country + "] (" + contact.pushname + " | " + formattedNumber + ") mandó un Archivo para convertirlo en PDF");
+
                     break;
                 }
                 case 'image/jpeg': {
@@ -75,6 +86,7 @@ client.on("message_create", async message => {
                     const nationalPhoneCode = require('national-phone-code')
                     const country = nationalPhoneCode.getCodeInfo(CodeCountry).english_name
                     const timestamp = require('moment-timezone');
+                    myLogger.log("[" + timestamp.tz("America/Argentina/Buenos_Aires").format("DD/MM - HH:mm") + "] [" + country + "] (" + contact.pushname + " | " + formattedNumber + ") mandó una Imagen para convertirla en Sticker");
                     console.log("[" + timestamp.tz("America/Argentina/Buenos_Aires").format("DD/MM - HH:mm") + "] [" + country + "] (" + contact.pushname + " | " + formattedNumber + ") mandó una Imagen para convertirla en Sticker");
                     break;
                 }
@@ -86,6 +98,7 @@ client.on("message_create", async message => {
                     const nationalPhoneCode = require('national-phone-code')
                     const country = nationalPhoneCode.getCodeInfo(CodeCountry).english_name
                     const timestamp = require('moment-timezone');
+                    myLogger.log("[" + timestamp.tz("America/Argentina/Buenos_Aires").format("DD/MM - HH:mm") + "] [" + country + "] (" + contact.pushname + " | " + formattedNumber + ") mandó un Gif/Video para convertirlo en Sticker Animado");
                     console.log("[" + timestamp.tz("America/Argentina/Buenos_Aires").format("DD/MM - HH:mm") + "] [" + country + "] (" + contact.pushname + " | " + formattedNumber + ") mandó un Gif/Video para convertirlo en Sticker Animado");
                     break;
                 }
@@ -94,6 +107,31 @@ client.on("message_create", async message => {
     }
 
 });
+
+
+const tiktok = require('tiktok-scraper-without-watermark')
+client.on("message_create", async message => {
+    if (!message.fromMe) {
+        if (message.links[0]) {
+            const chat = await message.getChat();
+            await chat.sendMessage("⏱️| *Espera un momento.*")
+            tiktok.tiktokdownload(message.links[0]?.link).then(async result => {
+                const b64 = Buffer.from(await fetch(result.nowm).then(e => e.arrayBuffer())).toString("base64");
+                const att = new MessageMedia("video/mp4", b64, "tiktok.mp4");
+                chat.sendMessage(att)
+
+                const contact = await message.getContact();
+                const CodeCountry = await contact.getCountryCode();
+                const formattedNumber = await contact.getFormattedNumber()
+                const nationalPhoneCode = require('national-phone-code')
+                const country = nationalPhoneCode.getCodeInfo(CodeCountry).english_name
+                const timestamp = require('moment-timezone');
+                myLogger.log("[" + timestamp.tz("America/Argentina/Buenos_Aires").format("DD/MM - HH:mm") + "] [" + country + "] (" + contact.pushname + " | " + formattedNumber + ') Descargó el TikTok "'+message.links[0]?.link+'" ');
+                console.log("[" + timestamp.tz("America/Argentina/Buenos_Aires").format("DD/MM - HH:mm") + "] [" + country + "] (" + contact.pushname + " | " + formattedNumber + ') Descargó el TikTok "'+message.links[0]?.link+'" ');
+            })
+        }
+    }
+})
 
 
 client.on('group_join', async message => {
@@ -110,7 +148,10 @@ client.on('group_join', async message => {
     const country = nationalPhoneCode.getCodeInfo(CodeCountry).english_name
     const groupname = chat.name
     const timestamp = require('moment-timezone');
+    myLogger.log("[" + timestamp.tz("America/Argentina/Buenos_Aires").format("DD/MM - HH:mm") + "] [" + country + "] (" + contact.pushname + " | " + formattedNumber + ") intentó agregarme al grupo " + groupname + " pero no pudo.");
     console.log("[" + timestamp.tz("America/Argentina/Buenos_Aires").format("DD/MM - HH:mm") + "] [" + country + "] (" + contact.pushname + " | " + formattedNumber + ") intentó agregarme al grupo " + groupname + " pero no pudo.");
+
 });
+
 
 client.initialize();

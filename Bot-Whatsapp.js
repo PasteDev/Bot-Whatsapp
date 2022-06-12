@@ -40,7 +40,6 @@ client.on("ready", () => {
 
 const myLogger = new Console({
     stdout: fs.createWriteStream("./Logs/log.txt"),
-    stderr: fs.createWriteStream("./Logs/errorLog.txt"),
 });
 
 
@@ -109,16 +108,18 @@ client.on("message_create", async message => {
 });
 
 
-const tiktok = require('tiktok-scraper-without-watermark')
+
 client.on("message_create", async message => {
     if (!message.fromMe) {
         if (message.links[0]) {
-            const chat = await message.getChat();
-            await chat.sendMessage("⏱️| *Espera un momento.*")
-            tiktok.tiktokdownload(message.links[0]?.link).then(async result => {
-                const b64 = Buffer.from(await fetch(result.nowm).then(e => e.arrayBuffer())).toString("base64");
+            if (message.body.includes("tiktok")) {
+                const chat = await message.getChat();
+
+                const request = await fetch(`https://masgimenz.my.id/tiktok/?url=${message.links[0]?.link}`);
+                const data = await request.json();
+                await chat.sendMessage("⏱️| *Wait a moment.*")
+                const b64 = Buffer.from(await fetch(data.aweme_details[0].video.play_addr.url_list[0]).then(e => e.arrayBuffer())).toString("base64");
                 const att = new MessageMedia("video/mp4", b64, "tiktok.mp4");
-                chat.sendMessage(att)
 
                 const contact = await message.getContact();
                 const CodeCountry = await contact.getCountryCode();
@@ -126,19 +127,34 @@ client.on("message_create", async message => {
                 const nationalPhoneCode = require('national-phone-code')
                 const country = nationalPhoneCode.getCodeInfo(CodeCountry).english_name
                 const timestamp = require('moment-timezone');
-                myLogger.log("[" + timestamp.tz("America/Argentina/Buenos_Aires").format("DD/MM - HH:mm") + "] [" + country + "] (" + contact.pushname + " | " + formattedNumber + ') Descargó el TikTok "'+message.links[0]?.link+'" ');
-                console.log("[" + timestamp.tz("America/Argentina/Buenos_Aires").format("DD/MM - HH:mm") + "] [" + country + "] (" + contact.pushname + " | " + formattedNumber + ') Descargó el TikTok "'+message.links[0]?.link+'" ');
-            })
+                myLogger.log("[" + timestamp.tz("America/Argentina/Buenos_Aires").format("DD/MM - HH:mm") + "] [" + country + "] (" + contact.pushname + " | " + formattedNumber + ') Descargó el TikTok "' + message.links[0]?.link + '" ');
+                console.log("[" + timestamp.tz("America/Argentina/Buenos_Aires").format("DD/MM - HH:mm") + "] [" + country + "] (" + contact.pushname + " | " + formattedNumber + ') Descargó el TikTok "' + message.links[0]?.link + '" ');
+                if (request.status === 200) {
+                    try {
+                        await chat.sendMessage(att);
+                    } catch (e) {
+                        setTimeout(() => {
+                            chat.sendMessage('⚠️| *WARNING*\n\n🇺🇸 - ```Failed to get video, try again and make sure url is correct.```\n\n\n🇪🇸 - ```No se pudo obtener el video, intente nuevamente y asegúrese de que la URL sea correcta.```');
+                        }, 500);
+                    }
+                } else {
+                    setTimeout(() => {
+                        chat.sendMessage('⚠️| *WARNING*\n\n🇺🇸 - ```Failed to get video, try again and make sure url is correct.```\n\n🇪🇸 - ```No se pudo obtener el video, intente nuevamente y asegúrese de que la URL sea correcta.```');
+                    }, 500);
+                }
+            } else message.reply("⚠️| *WARNING*\n\n🇺🇸 - ```This is not a TikTok link.```\n🇪🇸 - ```Este no es un link de TikTok.```")
         }
     }
-})
+});
+
+
 
 
 client.on('group_join', async message => {
     const chat = await message.getChat();
     const foto = "https://c.tenor.com/Or_pMDyHdygAAAAd/no-no-no-nope.gif"
     const media = await MessageMedia.fromUrl(foto);
-    await chat.sendMessage(media, { caption: '⚠️| *No pueden agregarme a Grupos!*\n\n_Si deseas usarme mandame un mensaje por_ *PRIVADO*' })
+    await chat.sendMessage(media, { caption: '⚠️| *They cant add me to Groups!*\n\n_If you want to use me send me a **PRIVATE MESSAGE**_ ' })
     await new Promise((s) => setTimeout(s, 2000))
     await chat.leave();
     const contact = await message.getContact();
@@ -152,6 +168,7 @@ client.on('group_join', async message => {
     console.log("[" + timestamp.tz("America/Argentina/Buenos_Aires").format("DD/MM - HH:mm") + "] [" + country + "] (" + contact.pushname + " | " + formattedNumber + ") intentó agregarme al grupo " + groupname + " pero no pudo.");
 
 });
+
 
 
 client.initialize();
